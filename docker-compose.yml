@@ -1,0 +1,119 @@
+version: "3.9"
+
+# ─────────────────────────────────────────────────────────
+# Shared network
+# ─────────────────────────────────────────────────────────
+networks:
+  media-net:
+    driver: bridge
+
+# ─────────────────────────────────────────────────────────
+# Named volumes
+# ─────────────────────────────────────────────────────────
+volumes:
+  pgdata:
+  feature-vectors:    # shared between feature-engine and ml-service
+
+# ─────────────────────────────────────────────────────────
+# Services
+# ─────────────────────────────────────────────────────────
+services:
+
+  # ── Infrastructure ────────────────────────────────────
+
+  postgres:
+    image: postgres:16
+    networks: [media-net]
+    environment:
+      POSTGRES_DB:       mediadb
+      POSTGRES_USER:     media
+      POSTGRES_PASSWORD: media
+    ports: ["5432:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "media"]
+      interval: 10s
+      retries: 5
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.6.0
+    networks: [media-net]
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    ports: ["2181:2181"]
+
+  kafka:
+    image: confluentinc/cp-kafka:7.6.0
+    networks: [media-net]
+    depends_on: [zookeeper]
+    ports: ["9092:9092", "9093:9093"]
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 15s
+      retries: 5
+
+  # ── Application Services ───────────────────────────────
+
+  gateway:
+    build: ./gateway-service
+    networks: [media-net]
+    ports: ["8080:8080"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_USER:              media
+      DB_PASS:              media
+      DB_HOST:              postgres
+      DB_PORT:              "5432"
+      DB_NAME:              mediadb
+      ML_SERVICE_URL:       http://ml-service:8000
+      FEATURE_ENGINE_HOST:  feature-engine
+      FEATURE_ENGINE_PORT:  "50051"
+      KAFKA_BROKERS:        kafka:9092
+      JWT_SECRET:           changeme-in-production-use-32chars
+
+  ml-service:
+    build: ./ml-service
+    networks: [media-net]
+    ports: ["8000:8000"]
+    volumes:
+      - feature-vectors:/app/vectors
+    environment:
+      VECTOR_DIR: /app/vectors
+
+  feature-engine:
+    build: ./feature-engine-cpp
+    networks: [media-net]
+    ports: ["50051:50051"]
+    volumes:
+      - feature-vectors:/vectors
+    environment:
+      VECTOR_OUTPUT_DIR: /vectors
+
+  stream-processor:
+    build: ./stream-processor-scala
+    networks: [media-net]
+    ports: ["8090:8090"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKERS:        kafka:9092
+      FEATURE_ENGINE_HOST:  feature-engine
+      FEATURE_ENGINE_PORT:  "50051"
+
+  frontend:
+    build: ./frontend
+    networks: [media-net]
+    ports: ["3000:80"]
+    depends_on: [gateway]

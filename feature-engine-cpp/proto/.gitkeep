@@ -1,0 +1,2 @@
+// TODO (Phase 3): copy/symlink infra/proto/feature_engine.proto here
+// and add protobuf/gRPC CMake codegen targets.

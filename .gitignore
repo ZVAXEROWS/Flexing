@@ -1,0 +1,62 @@
+# ─── Node / Frontend ────────────────────────────────────
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+
+# ─── Java / Maven ────────────────────────────────────────
+gateway-service/target/
+gateway-service/.mvn/wrapper/maven-wrapper.jar
+gateway-service/.env
+*.class
+*.jar
+*.war
+
+# ─── Python / ML Service ─────────────────────────────────
+ml-service/__pycache__/
+ml-service/.venv/
+ml-service/venv/
+ml-service/*.egg-info/
+ml-service/.env
+*.pyc
+*.pyo
+
+# ─── C++ / Feature Engine ────────────────────────────────
+feature-engine-cpp/build/
+feature-engine-cpp/.cache/
+*.o
+*.a
+*.so
+*.dylib
+
+# ─── Scala / sbt ─────────────────────────────────────────
+stream-processor-scala/target/
+stream-processor-scala/.bsp/
+stream-processor-scala/.metals/
+.bloop/
+
+# ─── IDE ─────────────────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+
+# ─── Docker ──────────────────────────────────────────────
+.dockerignore
+
+# ─── Secrets / Environment ───────────────────────────────
+*.env
+.env.*
+!*.env.example
+
+# ─── Data / ML Artefacts ─────────────────────────────────
+*.pkl
+*.pt
+*.pth
+*.h5
+*.npy
+*.npz
+vectors/

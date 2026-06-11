@@ -1,0 +1,14 @@
+# Kubernetes manifests will be added in a future phase.
+# Suggested layout:
+#
+#   infra/k8s/
+#   ├── namespace.yaml
+#   ├── gateway/
+#   │   ├── deployment.yaml
+#   │   └── service.yaml
+#   ├── ml-service/
+#   ├── feature-engine/
+#   ├── stream-processor/
+#   ├── frontend/
+#   ├── kafka/
+#   └── postgres/
